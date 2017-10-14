@@ -1,14 +1,10 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct  3 21:09:39 2017
-
-@author: gr
-"""
 from keras.utils.np_utils import to_categorical
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, MinMaxScaler
 import numpy as np
+
+
+
 def prepare_test_data(path_to_data):
     
     dataset = pd.read_csv("test.csv")
@@ -23,12 +19,11 @@ def prepare_train_data(path_to_data):
     y = dataset.iloc[:,1].values
     y = to_categorical(y)
 
-    
     return X, y    
-    #print features.shape
 
 def get_features(dataset, features_list, features_to_normalize):
 
+    #Handling missing values
     dataset.iloc[:, -1].fillna('Z', inplace=True)
     dataset['Age'] = dataset['Age'].fillna(dataset['Age'].median())
     dataset['SibSp'] = dataset['SibSp'].fillna(0)
@@ -37,24 +32,26 @@ def get_features(dataset, features_list, features_to_normalize):
 
 
     X = dataset.iloc[: , features_list].values
-    X_view = dataset.iloc[: , features_list]
+    #X_view = dataset.iloc[: , features_list]
+
+    
+    #Normalize numerical features.
+    min_max_scaler = MinMaxScaler()
+        
+    for i in features_to_normalize:
+        min_max_scaler.fit(X[:,i].reshape(-1, 1))
+        a= min_max_scaler.transform(X[:,i].reshape(-1, 1))
+        X[:,i] = a[:,0] 
 
 
-
+    #Transform categorical features into dummy varibles.
     le = LabelEncoder()
     X[:,1] = le.fit_transform(X[:,1])
     X[:,-1] = le.fit_transform(X[:,-1])
     
     
-    min_max_scaler = MinMaxScaler()
-        
-    for i in features_to_normalize:
-        min_max_scaler.fit(X[:,i].reshape(-1, 1))
-        
-        a= min_max_scaler.transform(X[:,i].reshape(-1, 1))
-        X[:,i] = a[:,0] 
-
     one_hot_encoder = OneHotEncoder(sparse = False)
+    
     features = one_hot_encoder.fit_transform(X[:,-1].reshape(-1,1))
     X = np.hstack((X[:,0:-1], features[:,[0,1,2]]))
     titles  = get_titles(dataset)
@@ -73,12 +70,12 @@ def titles_filter(title):
 
 def get_titles(dataset):
     le = LabelEncoder()
-    asd =  map( lambda a : a.split(",")[1].split(" ")[1], dataset["Name"])
-    asd = map(titles_filter, asd)
-    asdad = le.fit_transform(asd)
+    all_titles =  map( lambda a : a.split(",")[1].split(" ")[1], dataset["Name"])
+    filtred_titles = map(titles_filter, all_titles)
+    num_categories = le.fit_transform(filtred_titles)
     one_hot_encoder = OneHotEncoder(sparse = False)
-    features = one_hot_encoder.fit_transform(asdad.reshape(-1,1))
-    return features
+    dummy_varibles = one_hot_encoder.fit_transform(num_categories.reshape(-1,1))
+    return dummy_varibles
 
 
 
